@@ -1,11 +1,60 @@
-
 from freezegun import freeze_time
 from mcp.shared.exceptions import McpError
 import pytest
+from starlette.testclient import TestClient
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from mcp_server_time.http import create_http_app
 from mcp_server_time.server import TimeServer, get_local_tz
+
+
+def test_http_health_check():
+    with TestClient(create_http_app(allowed_hosts=["testserver"])) as client:
+        response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok", "service": "mcp-server-time"}
+
+
+def test_http_mcp_initialize():
+    with TestClient(create_http_app(allowed_hosts=["testserver"])) as client:
+        response = client.post(
+            "/mcp/",
+            headers={"Accept": "application/json"},
+            json={
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "1.0"},
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["result"]["serverInfo"]["name"] == "mcp-time"
+
+
+def test_http_cors_preflight_for_configured_origin():
+    with TestClient(
+        create_http_app(
+            allowed_hosts=["testserver"],
+            allowed_origins=["https://client.example"],
+        )
+    ) as client:
+        response = client.options(
+            "/mcp/",
+            headers={
+                "Origin": "https://client.example",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://client.example"
 
 
 @pytest.mark.parametrize(

@@ -8,6 +8,29 @@ Source: https://github.com/modelcontextprotocol/servers/tree/main/src/time
 
 Requires MCP Python SDK 1.x (`mcp>=1.29.0,<2`). SDK 2.0 renamed APIs this server uses. The port to v2 is in progress.
 
+## Azure App Service deployment
+
+This repository includes a production ASGI entrypoint for the time server. It exposes stateless MCP Streamable HTTP at `https://<app-name>.azurewebsites.net/mcp/` and health checks at `/healthz`.
+
+1. Create a Linux Azure App Service using Python 3.14 (or another supported Python version).
+2. In **Deployment Center**, connect this GitHub repository and select the `main` branch. Azure creates the deployment credentials used by `.github/workflows/main_time-mcp.yml`.
+3. Confirm the workflow's `app-name` is your App Service name. It is currently `time-mcp`.
+4. Run the workflow. It enables Oryx dependency installation and configures `bash startup.sh` as the startup command before deployment.
+5. Configure your MCP client with `https://<app-name>.azurewebsites.net/mcp/` as its Streamable HTTP endpoint.
+
+The root `requirements.txt` intentionally installs only `src/time`; the other monorepo servers are not started. `LOCAL_TIMEZONE` can be set in **Settings > Environment variables** to override the default timezone.
+
+For custom domains, set `MCP_ALLOWED_HOSTS` to a comma-separated list of accepted host names. Browser clients that send an `Origin` header also require exact origins in `MCP_ALLOWED_ORIGINS`. The default permits the App Service hostname and local development hosts while rejecting unconfigured hosts and origins.
+
+The endpoint has no application-level authentication. Enable [App Service Authentication](https://learn.microsoft.com/azure/app-service/overview-authentication-authorization) or another access control before exposing it publicly when anonymous access is not intended.
+
+Run the web service locally from the repository root:
+
+```bash
+pip install -r requirements.txt
+PORT=8000 bash startup.sh
+```
+
 ### Available Tools
 
 - `get_current_time` - Get current time in a specific timezone or system timezone.

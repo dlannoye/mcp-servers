@@ -120,7 +120,7 @@ class TimeServer:
         )
 
 
-async def serve(local_timezone: str | None = None) -> None:
+def create_server(local_timezone: str | None = None) -> Server:
     server = Server("mcp-time")
     time_server = TimeServer()
     local_tz = str(get_local_tz(local_timezone))
@@ -215,6 +215,11 @@ async def serve(local_timezone: str | None = None) -> None:
         except Exception as e:
             raise ValueError(f"Error processing mcp-server-time query: {str(e)}")
 
+    return server
+
+
+async def serve(local_timezone: str | None = None) -> None:
+    server = create_server(local_timezone)
     options = server.create_initialization_options()
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, options)

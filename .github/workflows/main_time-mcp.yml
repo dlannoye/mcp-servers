@@ -67,10 +67,16 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_82E24872B8064DD389EF61212CCA02DC }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_32E0FFE6D59B4B829A18D08F36C395B0 }}
 
+      - name: Configure Azure App Service
+        run: |
+          RESOURCE_GROUP=$(az webapp list --query "[?name=='time-mcp'].resourceGroup | [0]" --output tsv)
+          test -n "$RESOURCE_GROUP"
+          az webapp config appsettings set --resource-group "$RESOURCE_GROUP" --name "time-mcp" --settings SCM_DO_BUILD_DURING_DEPLOYMENT=1
+          az webapp config set --resource-group "$RESOURCE_GROUP" --name "time-mcp" --startup-file "bash startup.sh"
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'time-mcp'
           slot-name: 'Production'
-          
